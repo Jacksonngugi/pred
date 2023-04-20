@@ -1,0 +1,95 @@
+import pandas as pd 
+import numpy as np
+from sklearn.preprocessing import LabelEncoder
+from sklearn.metrics import accuracy_score 
+from sklearn.model_selection import GridSearchCV 
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.neural_network import MLPClassifier
+import glob
+from xgboost import XGBClassifier
+import warnings
+
+all_df = []
+for file in (glob.glob("/Users/Vin/numbered/*")):
+    
+
+    data=pd.read_csv(file)
+    
+    all_df.append(data)
+df = pd.concat(all_df,ignore_index = True)
+#df = pd.read_csv('/Users/Vin/fbrefdata/premierleague2022')
+df = df.dropna(subset=['Time'])
+
+grp = df.groupby("Team")
+
+def rolling_average(grp,cols,new_cols):
+    grp = grp.sort_values("Date")
+    rolling_stats=grp[cols].rolling(5,closed='left').mean()
+    grp[new_cols] = rolling_stats
+    grp =grp.dropna(subset=new_cols)
+    return grp
+
+cols=['Poss','PK','PKatt','Sh','SoT','Dist']
+new_cols = [f"{c}_rolling" for c in cols]
+matches = df.groupby("Team").apply(lambda x: rolling_average(x,cols,new_cols))
+df = matches.droplevel("Team")
+df.index = range(matches.shape[0])
+
+
+
+categorical_features = ['Venue', 'Comp', 'Opponent','Team','Round','Result']
+encoders = dict()
+for cat in categorical_features:
+    encoders[cat] = LabelEncoder()
+    df[f'{cat}_n'] = encoders[cat].fit_transform(df[cat])
+df['hour'] = df['Time'].str.replace(':.+',"",regex =True).astype("int")
+
+
+
+from pprint import pprint
+clf=XGBClassifier()
+#clf = MLPClassifier(random_state=12,hidden_layer_sizes=20,activation='relu',solver='adam',learning_rate='adaptive',learning_rate_init = 0.0001,max_iter = 1500)
+#clf = RandomForestClassifier(n_estimators=50,min_samples_split=10,random_state=1)
+
+#pprint(clf.get_params())
+warnings.filterwarnings('ignore')
+
+train = df[df["Date"] < "2023-03-01"]
+test=df[df["Date"] > "2023-03-01"]
+
+test = test.sort_values("Date")
+
+train = train[['Date','Comp_n','Round_n','Sh','SoT','PKatt','Sh_rolling','SoT_rolling','Dist_rolling','PK_rolling','PKatt_rolling','Poss_rolling','Season','hour', 'Opponent_n', 'Venue_n', 'Team_n','Result_n']]
+test = test[['Date','Comp_n','Round_n','Sh','SoT','PKatt','Sh_rolling','SoT_rolling','Dist_rolling','PK_rolling','PKatt_rolling','Poss_rolling','Season','hour', 'Opponent_n', 'Venue_n', 'Team_n','Result_n']]
+
+train = train.dropna()
+test = test.dropna()
+
+
+#x = ['hour','opp_code','venue_code','xG','xGA','team']
+x = ['Team_n','Opponent_n','Venue_n','hour','Comp_n','Round_n','Poss_rolling','PK_rolling','PKatt_rolling','Sh_rolling','SoT_rolling']
+y = ['Result_n']
+
+#params = {
+    #'hidden_layer_sizes':[10,(10,5)],
+    #'activation':['relu'],
+    #'solver':['adam'],
+    #'learning_rate':['adaptive']
+
+
+#}
+
+#gridsearch = GridSearchCV(MLPClassifier(),params,verbose=2)
+#gridsearch.fit(train[x],train[y].values.ravel())
+#print('best params:',gridsearch.best_params_)
+
+clf.fit(train[x],train[y].values.ravel())
+
+
+
+pred = clf.predict(test[x])
+print(pred)
+print(test[y])
+acc = accuracy_score(test[y],pred)
+
+print(acc)

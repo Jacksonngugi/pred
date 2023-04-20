@@ -1,0 +1,71 @@
+import pandas as pd 
+import numpy as np
+from sklearn.preprocessing import LabelEncoder
+from sklearn.metrics import accuracy_score 
+from sklearn.model_selection import GridSearchCV 
+from sklearn.ensemble import RandomForestClassifier
+import glob
+from sklearn.neural_network import MLPClassifier
+from xgboost import XGBClassifier
+from sklearn import svm
+
+all_df = []
+for file in (glob.glob("/Users/Vin/data/*.csv")):
+    
+
+    df=pd.read_csv(file)
+    
+    all_df.append(df)
+data = pd.concat(all_df,ignore_index = True)
+
+
+del data["Time"]
+
+data = data.dropna()
+
+
+categorical_features = ['Div','HomeTeam','AwayTeam','FTR']
+encoders = dict()
+for cat in categorical_features:
+    encoders[cat] = LabelEncoder()
+    data[f'{cat}_n'] = encoders[cat].fit_transform(data[cat])
+
+
+data['Date'] = pd.to_datetime(data['Date'],dayfirst =True)
+
+data = data.sort_values("Date")
+
+#print(data)
+#data = data.sort_values(by=['HomeTeam'])
+#clf= svm.SVC(kernel='linear', C=1,gamma=0)
+#clf=XGBClassifier(seed=10)
+#clf = MLPClassifier(random_state=12,hidden_layer_sizes=28,activation='relu',solver='adam',learning_rate='adaptive')
+from pprint import pprint # use it to check the current hyperparameters of the classifier using pprint(clf.get_params())
+#clf  = RandomForestClassifier(n_estimators = 300,
+               #criterion = "entropy",
+               #max_depth = 10,
+               #random_state = 1,
+               #max_features = 'sqrt',
+              # min_samples_leaf = 50,
+               #min_samples_split = 10,
+               #min_weight_fraction_leaf = 0.01,
+               #n_jobs = -1
+                 # )
+clf=XGBClassifier(seed=10)
+#pprint(clf.get_params())
+
+train = data[data['Date'] < "2022-05-28"]
+test = data[data['Date'] >= "2022-05-28 "]
+
+x = ['Div_n','HomeTeam_n','AwayTeam_n','1','x','2']
+y = ['FTR_n']
+
+clf.fit(train[x],train[y].values.ravel())
+
+pred = clf.predict(test[x]) 
+print(pred)
+print(test[y])
+
+acc = accuracy_score(test[y],pred)
+
+print(acc)

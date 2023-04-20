@@ -1,0 +1,108 @@
+import pandas as pd 
+import numpy as np 
+from sklearn.preprocessing import LabelEncoder
+from sklearn.neural_network import MLPClassifier
+import glob
+import warnings
+from sklearn.feature_extraction.text import CountVectorizer
+
+warnings.filterwarnings('ignore')
+
+all_df = []
+for file in (glob.glob("/Users/Vin/numbered/*")):
+    
+
+    data=pd.read_csv(file)
+    
+    all_df.append(data)
+df = pd.concat(all_df,ignore_index = True)
+
+#df = df[df['Team'] == 'Lecce']
+
+#print(df['Comp'])
+
+
+grp = df.groupby("Team")
+
+def rolling_average(grp,cols,new_cols):
+    grp = grp.sort_values("Date")
+    rolling_stats=grp[cols].rolling(5,closed='left').mean()
+    grp[new_cols] = rolling_stats
+    grp =grp.dropna(subset=new_cols)
+    return grp
+
+cols=['Poss','PK','PKatt','Sh','SoT','Dist']
+new_cols = [f"{c}_rolling" for c in cols]
+matches = df.groupby("Team").apply(lambda x: rolling_average(x,cols,new_cols))
+df = matches.droplevel("Team")
+df.index = range(matches.shape[0])
+
+categorical_features = ['Venue', 'Comp', 'Opponent','Team','Round','Result']
+encoders = dict()
+for cat in categorical_features:
+    encoders[cat] = LabelEncoder()
+    df[f'{cat}_n'] = encoders[cat].fit_transform(df[cat])
+
+
+df['hour'] = df['Time'].str.replace(':.+',"",regex =True).astype("int")
+
+clf = MLPClassifier(random_state=12,hidden_layer_sizes=20,activation='relu',solver='adam',learning_rate='adaptive',learning_rate_init = 0.0001)
+
+df = df[['Date','Comp_n','Round_n','Sh','SoT','PKatt','Sh_rolling','SoT_rolling','Dist_rolling','PK_rolling','PKatt_rolling','Poss_rolling','Season','hour', 'Opponent_n', 'Venue_n', 'Team_n','Result_n']]
+
+x = ['Team_n','Opponent_n','Venue_n','hour','Comp_n','Round_n','Poss_rolling','PK_rolling','PKatt_rolling','Sh_rolling','SoT_rolling']
+y = ['Result_n']
+
+clf.fit(df[x],df[y].values.ravel())
+
+data = pd.DataFrame({
+    'Time':['23:00'],
+    'Comp':['Ligue 1'],
+    'Team':['Toulouse'],
+    'Opponent':['Angers'],
+    'Venue':['Home'],
+    'Round':['Matchweek 38'],
+    'Poss_rolling':[50.8],
+    'PK_rolling':[0.2],
+    'PKatt_rolling':[0.2],
+    'Sh_rolling':[14.4],
+    'SoT_rolling':[6.4]
+
+})
+
+team = encoders['Opponent']
+data['Opponent'] =team.transform(data['Opponent'])
+team = encoders['Team']
+data['Team'] =team.transform(data['Team'])
+team = encoders['Round']
+data['Round'] =team.transform(data['Round'])
+team = encoders['Comp']
+data['Comp'] =team.transform(data['Comp'])
+team = encoders['Venue']
+data['Venue'] =team.transform(data['Venue'])
+data['hour'] = data['Time'].str.replace(':.+',"",regex =True).astype("int")
+
+ddata = pd.DataFrame({
+    'Team_n':data['Team'],
+    'Opponent_n':data['Opponent'],
+    'Venue_n':data['Venue'],
+    'hour':data['hour'],
+    'Comp_n':data['Comp'],
+    'Round_n':data['Round'],
+    'Poss_rolling':data['Poss_rolling'],
+    'PK_rolling':data['PK_rolling'],
+    'PKatt_rolling':data['PKatt_rolling'],
+    'Sh_rolling':data['Sh_rolling'],
+    'SoT_rolling':data['SoT_rolling']
+
+})
+
+
+print(ddata)
+
+pred = clf.predict(ddata)
+
+print(pred)
+
+
+
