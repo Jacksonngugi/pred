@@ -45,8 +45,9 @@ for cat in categorical_features:
 
 print(df[df['Date'] >= "2022-05-28"])
 
-train = df[df['Date'] < "2022-05-28"]
-test = df[df['Date'] >= "2022-05-28 "]
+#train = df[df['Date'] < "2022-05-28"]
+#test = df[df['Date'] >= "2022-05-28 "]
+train = df
 
 x = ['new_Div_n','HomeTeam_n','AwayTeam_n','1','x','2']
 y = ['FTR_n']
@@ -54,12 +55,12 @@ y = ['FTR_n']
 clf.fit(train[x],train[y].values.ravel())
 
 df = pd.DataFrame({
-    'hometeam':[""],
-    'awayteam':['Ath Madrid'],
-    'new_div':['LaLiga'],
-    '1':[3.80],
-    'x':[3.40],
-    '2':[2.05]
+    'hometeam':["Arsenal"],
+    'awayteam':['Southampton'],
+    'new_div':['EPL'],
+    '1':[1.22],
+    'x':[7.60],
+    '2':[15.00]
 
 })
 HT=encoders['HomeTeam']
