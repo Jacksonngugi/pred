@@ -43,7 +43,7 @@ for cat in categorical_features:
     encoders[cat] = LabelEncoder()
     df[f'{cat}_n'] = encoders[cat].fit_transform(df[cat])
 
-
+print(df[df['Date'] >= "2022-05-28"])
 
 train = df[df['Date'] < "2022-05-28"]
 test = df[df['Date'] >= "2022-05-28 "]
