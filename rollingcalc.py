@@ -1,3 +1,4 @@
+#Here i calculate the rolling average which i will late using for prediction
 import pandas as pd 
 
 df = pd.read_csv('\\Users\\Vin\\numbered\\EPL')
