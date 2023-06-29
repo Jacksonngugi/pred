@@ -48,6 +48,7 @@ df['Formation'] = df['Formation'].astype("category").cat.codes
 df['Round'] = df['Round'].astype("category").cat.codes
 
 from pprint import pprint
+#Uncomment the classifier you want to using.
 clf=XGBClassifier()
 #clf = MLPClassifier(random_state=12,hidden_layer_sizes=20,activation='relu',solver='adam',learning_rate='adaptive',learning_rate_init = 0.0001)
 #clf = RandomForestClassifier(n_estimators=50,min_samples_split=10,random_state=1)
